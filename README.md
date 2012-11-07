@@ -39,3 +39,25 @@ class TestPackage(RpmPackage):
         r.addSource('testfile.txt', dir='/etc/')
         r.addArchive('tarball.tar.gz', '/opt/data')
 ```
+
+Example Joe Recipe:
+---
+
+```python
+class TestPackage(RpmPackage):
+
+    name = "joe"
+    version = "3.7"
+    release = "1"
+    description = "joe's editor"
+    license = "GPL"
+    vendor = "joe"
+    packager = "tanner.jc@gmail.com"
+    url = "http://joe-editor.sourceforge.net/"
+
+    def setup(r):
+        r.addArchive('joe-3.7.tar.gz')
+        r.Configure()
+        r.Make()
+        r.MakeInstall()
+```

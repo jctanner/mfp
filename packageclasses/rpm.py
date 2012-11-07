@@ -111,3 +111,37 @@ class RpmPackage(object):
                     data = f.read()
                     f.close()
                     self.Create(tf, data, dir)
+
+    def Configure(self, options=None):
+
+            self.packageobj.section_prep += "%setup -q"
+
+            if options == None:
+                self.packageobj.section_build += "%configure \n"
+            else:
+                self.packageobj.section_build += "./configure %s \n"%(options)
+
+    def Make(self, options=None):
+            if options == None:
+                self.packageobj.section_build += "make \n"
+            else:
+                self.packageobj.section_build += "make %s \n"%(options)
+
+    def MakeInstall(self, options=None):
+            if options == None:
+                self.packageobj.section_install+= "make install DESTDIR=%{buildroot} \n"
+            else:
+                self.packageobj.section_install += "make %s \n"%(options)
+
+            #pdb.set_trace()
+            sub = self.packageobj.get_subpackage(None)
+            sub.section_files += '/*\n'
+            '''
+            sub.section_files += '%{_sysconfdir}/*\n'
+            sub.section_files += '%{_prefix}/*\n'
+            sub.section_files += '%{_exec_prefix}/*\n'
+            sub.section_files += '%{_bindir}/*\n'
+            sub.section_files += '%{_libdir}/*\n'
+            sub.section_files += '%{_libexecdir}/*\n'
+            sub.section_files += '%{_sbindir}/*\n'
+            '''
