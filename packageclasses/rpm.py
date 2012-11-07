@@ -61,7 +61,7 @@ class RpmPackage(object):
         f.close()
         self.Create(filename, data, dir)
 
-    def addArchive(self, filename, dir):
+    def addArchive(self, filename, dir=None):
         #pass
         #self.packageobj.add_compressed_file(filename, dir)
         '''
@@ -88,18 +88,26 @@ class RpmPackage(object):
             print "     cant not handle %s types yet" % type
             sys.exit("error") 
 
+        #pdb.set_trace()
 
-        if filetype == "tar":
-            extractdir = "tartmp"
-            t = tarfile.open(filename)    
-            #print t.list(verbose=False)
-            tfiles = t.list(verbose=False)
-            #print tfiles
-            t.extractall(extractdir)
-            #pdb.set_trace()
+        # if no directory is given, assume this is a source tarball
+        #   else, extract all files and add individually
 
-            for tf in os.listdir(extractdir):
-                f = open(extractdir + "/" + tf, 'r')
-                data = f.read()
-                f.close()
-                self.Create(tf, data, dir)
+        if dir == None:
+            fakefile = rpmfluff.ExternalSourceFile(filename, filename)
+            self.packageobj.add_source(fakefile)
+        else:
+            if filetype == "tar":
+                extractdir = "mfp.tmp"
+                t = tarfile.open(filename)    
+                #print t.list(verbose=False)
+                tfiles = t.list(verbose=False)
+                #print tfiles
+                t.extractall(extractdir)
+                #pdb.set_trace()
+
+                for tf in os.listdir(extractdir):
+                    f = open(extractdir + "/" + tf, 'r')
+                    data = f.read()
+                    f.close()
+                    self.Create(tf, data, dir)
