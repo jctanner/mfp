@@ -6,4 +6,4 @@ multi-format packager
 
 input: python/conary like recipe
 
-output: rpm / deb / ?
+output:  .spec + srcrpm + rpm  / deb / ?
