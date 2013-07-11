@@ -1,0 +1,14 @@
+class TestPackage(RpmPackage):
+
+    name = "mypackage"
+    version = "1"
+    release = "1"
+    description = "test package"
+    license = "GPL"
+    vendor = "jtanner"
+    packager = "jtanner"
+    url = "localhost"
+
+
+    def setup(r):
+        r.Create('newfile', contents="hello world\n", dir='/etc')
