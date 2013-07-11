@@ -5,16 +5,39 @@ import rpmfluff
 import magic
 import tarfile
 import os
+import sys
+import fetchsources
+import tempfile
+import glob
+import shutil
 
 #packagename = "test"
 
 class RpmPackage(object): 
     def __init__(self):
-        #self.name = "test"
-        #foo = rpmfluff.SimpleRpmBuild(packagename, "0.1", "1")
         self.packageobj = rpmfluff.SimpleRpmBuild(self.name, 
                                                 self.version, 
                                                 self.release)
+        if hasattr(self, 'buildrequires'):
+            for br in self.buildrequires:
+                self.packageobj.add_build_requires(br)
+
+        #description, group, license, packager, summary, url
+        try:
+            self.packageobj.basePackage.description = self.description
+            self.packageobj.basePackage.group = self.group
+            self.packageobj.license = self.license
+            self.packageobj.packager = self.packager
+            self.packageobj.basePackage.summary = self.summary
+            self.packageobj.url = self.url
+        except:
+            pass
+
+        #import epdb; epdb.st()
+        self.builddir = tempfile.mkdtemp()
+        print "> buildir: %s" % self.builddir
+        os.chdir(self.builddir)
+        #os.chdir('/tmp')
 
     def setup(self,args):
         print "class setup"
@@ -25,22 +48,31 @@ class RpmPackage(object):
         #pdb.set_trace()
 
         if args.verbose:
-            print "    verbose mode on"
+            print "> verbose mode on"
 
         if args.speconly:
-            print "    speconly mode on"
+            print "> speconly mode on"
 
         print ""
-        print "    package name:" , str(self.name)
-        print "    package version:" , str(self.version)
-        print "    package release:" , str(self.release)
+        print "> package name:" , str(self.name)
+        print "> package version:" , str(self.version)
+        print "> package release:" , str(self.release)
 
         self.setup()
         #pdb.set_trace()
         if args.speconly:
             self.packageobj.gather_spec_file('')
+            self._copySpecToRpmbuild()
         else:
             self.packageobj.make()
+
+    def _copySpecToRpmbuild(self):
+        specdir = os.path.join(os.environ['HOME'], 'rpmbuild', 'SPECS')
+        assert os.path.isdir(specdir), "please create %s" % specdir    
+        for filename in glob.glob(os.path.join(self.builddir, '*.spec')):
+            shutil.copy(filename, specdir)
+            #import epdb; epdb.st()
+            print "> ", os.path.join(specdir, os.path.basename(filename))
 
     def Create(self, filename, contents, dir):
         fakefile = rpmfluff.SourceFile(filename, contents)
@@ -62,55 +94,24 @@ class RpmPackage(object):
         self.Create(filename, data, dir)
 
     def addArchive(self, filename, dir=None):
-        #pass
-        #self.packageobj.add_compressed_file(filename, dir)
-        '''
-        self.packageobj.add_generated_tarball(filename,
-                                                '',
-                                                'contents',
-                                                installPath=dir)
-        '''
-        filetype = ""
-        ms = magic.open(magic.MAGIC_NONE)
-        ms.load()
-        f = file(filename, 'r')
-        buffer = f.read(4096)
-        f.close()
-        type = ms.buffer(buffer)
-        ms.close
-        print "     %s" % type
-        #pdb.set_trace()
 
-        if "gzip compressed data, from Unix" in type:
-            print "     this is a gzip file"
-            filetype = "tar"
-        else:
-            print "     cant not handle %s types yet" % type
-            sys.exit("error") 
+        if filename.startswith('http://') or filename.startswith('https://'):
+            filename = fetchsources.fetchHttpFile(filename, self.builddir)
+        filename = os.path.join(self.builddir, filename)
+        print "> %s" % filename
 
-        #pdb.set_trace()
+        # copy file to ~/rpmbuild/SOURCES
+        dstdir = os.path.join(os.environ['HOME'], 'rpmbuild', 'SOURCES')
+        dstfile = os.path.join(dstdir, os.path.basename(filename))
+        assert os.path.isdir(dstdir), "please create %s" % dstdir
+        shutil.copyfile(filename, dstfile) 
+        filename = os.path.basename(dstfile)
+        #import epdb; epdb.st()
 
-        # if no directory is given, assume this is a source tarball
-        #   else, extract all files and add individually
-
-        if dir == None:
-            fakefile = rpmfluff.ExternalSourceFile(filename, filename)
-            self.packageobj.add_source(fakefile)
-        else:
-            if filetype == "tar":
-                extractdir = "mfp.tmp"
-                t = tarfile.open(filename)    
-                #print t.list(verbose=False)
-                tfiles = t.list(verbose=False)
-                #print tfiles
-                t.extractall(extractdir)
-                #pdb.set_trace()
-
-                for tf in os.listdir(extractdir):
-                    f = open(extractdir + "/" + tf, 'r')
-                    data = f.read()
-                    f.close()
-                    self.Create(tf, data, dir)
+        # add to spec
+        fakefile = rpmfluff.ExternalSourceFile(filename, filename)
+        self.packageobj.add_source(fakefile)
+        self.packageobj.section_build += "tar xvf %s" % filename
 
     def Configure(self, options=None):
 
@@ -122,26 +123,35 @@ class RpmPackage(object):
                 self.packageobj.section_build += "./configure %s \n"%(options)
 
     def Make(self, options=None):
-            if options == None:
-                self.packageobj.section_build += "make \n"
-            else:
-                self.packageobj.section_build += "make %s \n"%(options)
+		if options == None:
+			self.packageobj.section_build += "make \n"
+			print "> make"
+		else:
+			self.packageobj.section_build += "make %s \n"%(options)
+			print "> make %s" % options
 
     def MakeInstall(self, options=None):
-            if options == None:
-                self.packageobj.section_install+= "make install DESTDIR=%{buildroot} \n"
-            else:
-                self.packageobj.section_install += "make %s \n"%(options)
+		if options == None:
+			self.packageobj.section_install+= "make install DESTDIR=%{buildroot} \n"
+			print "> make install DESTDIR=%{buildroot}"
+		else:
+			self.packageobj.section_install += "make install %s \n"%(options)
+			print "> make install %s" % options
 
-            #pdb.set_trace()
-            sub = self.packageobj.get_subpackage(None)
-            sub.section_files += '/*\n'
-            '''
-            sub.section_files += '%{_sysconfdir}/*\n'
-            sub.section_files += '%{_prefix}/*\n'
-            sub.section_files += '%{_exec_prefix}/*\n'
-            sub.section_files += '%{_bindir}/*\n'
-            sub.section_files += '%{_libdir}/*\n'
-            sub.section_files += '%{_libexecdir}/*\n'
-            sub.section_files += '%{_sbindir}/*\n'
-            '''
+		#pdb.set_trace()
+		sub = self.packageobj.get_subpackage(None)
+		sub.section_files += '/*\n'
+		'''
+		sub.section_files += '%{_sysconfdir}/*\n'
+		sub.section_files += '%{_prefix}/*\n'
+		sub.section_files += '%{_exec_prefix}/*\n'
+		sub.section_files += '%{_bindir}/*\n'
+		sub.section_files += '%{_libdir}/*\n'
+		sub.section_files += '%{_libexecdir}/*\n'
+		sub.section_files += '%{_sbindir}/*\n'
+		'''
+
+    def Run(self, command):
+        print "> %s" % command
+        self.packageobj.section_build += "%s\n" % command
+        self.packageobj.section_install += "%s\n" % command
