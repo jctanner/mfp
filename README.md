@@ -61,3 +61,34 @@ class TestPackage(RpmPackage):
         r.Make()
         r.MakeInstall()
 ```
+
+Example Conary Package Manager:
+---
+```python
+class TestPackage(RpmPackage):
+
+    name = "conary"
+    version = "2.4.13"
+    release = "1"
+    description = "conary package manager"
+    license = "Apache 2.0"
+    vendor = "rpath"
+    summary = "conary package manager"
+    group = "System Environment/Base"
+    packager = "tanner.jc@gmail.com"
+    url = "https://bitbucket.org/rpathsync/conary"
+
+    buildrequires = ['python-devel', 'openssl-devel', 'elfutils-libelf-devel', 'sqlite-devel']
+
+    def setup(r):
+        r.addArchive("https://bitbucket.org/rpathsync/conary/get/conary-2.4.13.tar.gz")
+
+        # cd rpathsync-conary-9e82ab6709a2
+        r.Run("cd rpathsync-conary-*")
+
+        # make minimal libelf=-lelf
+        r.Make(options="minimal libelf=-lelf")
+
+        # make install NO_KID=1
+        r.MakeInstall(options="NO_KID=1")
+```
