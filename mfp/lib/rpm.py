@@ -111,7 +111,7 @@ class RpmPackage(object):
         # add to spec
         fakefile = rpmfluff.ExternalSourceFile(filename, filename)
         self.packageobj.add_source(fakefile)
-        self.packageobj.section_build += "tar xvf %s" % filename
+        self.packageobj.section_build += "tar xvf %s\n" % filename
 
     def Configure(self, options=None):
 
