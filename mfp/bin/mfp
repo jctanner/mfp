@@ -2,7 +2,7 @@
 
 import pdb
 import argparse
-from packageclasses.rpm import RpmPackage 
+from mfp.lib.rpm import RpmPackage 
 
 parser = argparse.ArgumentParser(description='cook a recipe')
 parser.add_argument('filename')
