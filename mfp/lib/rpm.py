@@ -154,4 +154,3 @@ class RpmPackage(object):
     def Run(self, command):
         print "> %s" % command
         self.packageobj.section_build += "%s\n" % command
-        self.packageobj.section_install += "%s\n" % command
